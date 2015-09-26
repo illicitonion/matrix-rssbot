@@ -65,7 +65,8 @@ func main() {
 					log.Printf("Error checking: %v", err)
 					continue
 				}
-				for _, entry := range entries {
+				for i := len(entries) - 1; i >= 0; i++ {
+					entry := entries[i]
 					b.SendMessage(roomID, &event.Message{
 						Body: fmt.Sprintf("%s - %s", entry.Title, entry.Link),
 						//Format:        "org.matrix.custom.html",
