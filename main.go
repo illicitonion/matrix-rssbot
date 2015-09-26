@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -56,7 +57,7 @@ func main() {
 
 	for _, rm := range c.RoomMappings {
 		watcher := rss.NewChecker(rm.FeedURL, rememberer)
-		go func(roomID string, w *rss.Checker) {
+		go func(rm roomMapping, w *rss.Checker) {
 			t := time.Tick(1 * time.Minute)
 			for _ = range t {
 				log.Printf("Checking for new posts...")
@@ -65,21 +66,36 @@ func main() {
 					log.Printf("Error checking: %v", err)
 					continue
 				}
-				for i := len(entries) - 1; i >= 0; i++ {
+				for i := len(entries) - 1; i >= 0; i-- {
 					entry := entries[i]
-					b.SendMessage(roomID, &event.Message{
-						Body: fmt.Sprintf("%s - %s", entry.Title, entry.Link),
-						//Format:        "org.matrix.custom.html",
-						//FormattedBody: fmt.Sprintf(`<a href="%s">%s</a>`, entry.Link, entry.Title),
-						Msgtype: "m.text",
-					})
+					messages, err := formatEntry(entry, rm)
+					if err != nil {
+						log.Printf("Error formatting entry: %v", err)
+						continue
+					}
+					for _, m := range messages {
+						b.SendMessage(rm.RoomID, &m)
+					}
 				}
 			}
-		}(rm.RoomID, watcher)
+		}(rm, watcher)
 	}
 
 	http.HandleFunc("/", handle)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
+}
+
+func formatEntry(item rss.Item, rm roomMapping) ([]event.Message, error) {
+	if rm.FeedURL == "http://xkcd.com/rss.xml" {
+		return parseXKCD(item)
+	}
+
+	return []event.Message{{
+		Body: fmt.Sprintf("%s - %s", item.Title, item.Link),
+		//Format:        "org.matrix.custom.html",
+		//FormattedBody: fmt.Sprintf(`<a href="%s">%s</a>`, entry.Link, entry.Title),
+		Msgtype: "m.text",
+	}}, nil
 }
 
 func readConfig() config {
@@ -147,4 +163,32 @@ func (r *fileRememberer) Tell(s string) {
 
 func stripNewlines(s string) string {
 	return strings.Replace(s, "\n", "", -1)
+}
+
+type ImgTag struct {
+	Src   string `xml:"src,attr"`
+	Title string `xml:"title,attr"`
+}
+
+func parseXKCD(i rss.Item) ([]event.Message, error) {
+	var img ImgTag
+	if err := xml.Unmarshal([]byte(i.Description), &img); err != nil {
+		return nil, err
+	}
+
+	return []event.Message{
+		{
+			Body:    i.Title,
+			Msgtype: "m.text",
+		},
+		{
+			Body:    i.Link,
+			URL:     img.Src,
+			Msgtype: "m.image",
+		},
+		{
+			Body:    img.Title,
+			Msgtype: "m.text",
+		},
+	}, nil
 }
