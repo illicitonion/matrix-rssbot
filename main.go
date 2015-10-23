@@ -91,10 +91,10 @@ func formatEntry(item rss.Item, rm roomMapping) ([]event.Message, error) {
 	}
 
 	return []event.Message{{
-		Body: fmt.Sprintf("%s - %s", item.Title, item.Link),
-		//Format:        "org.matrix.custom.html",
-		//FormattedBody: fmt.Sprintf(`<a href="%s">%s</a>`, entry.Link, entry.Title),
-		Msgtype: "m.text",
+		Body:          fmt.Sprintf("%s - %s", item.Title, item.Link),
+		Format:        "org.matrix.custom.html",
+		FormattedBody: fmt.Sprintf(`<a href="%s">%s</a>`, item.Link, item.Title),
+		Msgtype:       "m.text",
 	}}, nil
 }
 
