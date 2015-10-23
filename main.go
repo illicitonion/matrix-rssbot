@@ -176,9 +176,15 @@ func parseXKCD(i rss.Item) ([]event.Message, error) {
 		return nil, err
 	}
 
+	parts := strings.Split(i.Link, "/")
+	number := "??"
+	if len(parts) > 2 {
+		number = parts[len(parts)-2]
+	}
+
 	return []event.Message{
 		{
-			Body:    i.Title,
+			Body:    fmt.Sprintf("XKCD %s - %s", number, i.Title),
 			Msgtype: "m.text",
 		},
 		{
