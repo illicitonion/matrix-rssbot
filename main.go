@@ -86,7 +86,7 @@ func main() {
 }
 
 func formatEntry(item rss.Item, rm roomMapping) ([]event.Message, error) {
-	if rm.FeedURL == "http://xkcd.com/rss.xml" {
+	if rm.FeedURL == "https://xkcd.com/rss.xml" {
 		return parseXKCD(item)
 	}
 
@@ -183,7 +183,7 @@ func parseXKCD(i rss.Item) ([]event.Message, error) {
 		},
 		{
 			Body:    i.Link,
-			URL:     img.Src,
+			URL:     strings.Replace(img.Src, "http://", "https://", 1),
 			Msgtype: "m.image",
 		},
 		{
